@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Master Pro</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(45deg, #4c51bf, #667eea);
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7fafc;
+            --bg-tertiary: #e2e8f0;
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --border-color: #e2e8f0;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.15);
+            --success-color: #48bb78;
+            --error-color: #f56565;
+            --warning-color: #ed8936;
+            --info-color: #4299e1;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a202c;
+            --bg-secondary: #2d3748;
+            --bg-tertiary: #4a5568;
+            --text-primary: #f7fafc;
+            --text-secondary: #e2e8f0;
+            --border-color: #4a5568;
+            --shadow-light: rgba(0, 0, 0, 0.3);
+            --shadow-medium: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-logo {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-text {
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: all 0.5s ease;
+        }
+
+        .welcome-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-content {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 40px;
+        }
+
+        .welcome-title {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: slideInDown 1s ease;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: slideInUp 1s ease 0.2s both;
+        }
+
+        .welcome-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .feature-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 1s ease 0.4s both;
+        }
+
+        .start-game-btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: fadeIn 1s ease 0.6s both;
+        }
+
+        .start-game-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Container */
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .main-container.visible {
+            opacity: 1;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid var(--border-color);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 0 2rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-logo {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-menu {
+            padding: 2rem 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 1rem;
+        }
+
+        .menu-item:hover,
+        .menu-item.active {
+            background: var(--secondary-gradient);
+            color: white;
+            transform: translateX(10px);
+        }
+
+        .menu-icon {
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            width: 24px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            position: relative;
+        }
+
+        .main-content.with-sidebar {
+            margin-left: 280px;
+        }
+
+        /* Top Header */
+        .top-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            display: none;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle, .sound-toggle, .settings-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover, .sound-toggle:hover, .settings-btn:hover {
+            background: var(--secondary-gradient);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Game Container */
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: var(--secondary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px var(--shadow-light);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Sudoku Grid */
+        .sudoku-container {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px var(--shadow-medium);
+            margin-bottom: 2rem;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            gap: 2px;
+            background: var(--text-primary);
+            border: 3px solid var(--text-primary);
+            border-radius: 15px;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 450px;
+            aspect-ratio: 1;
+        }
+
+        .sudoku-cell {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        .sudoku-cell:hover {
+            background: var(--info-color);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .sudoku-cell.selected {
+            background: var(--info-color) !important;
+            color: white !important;
+            box-shadow: inset 0 0 0 2px var(--info-color);
+        }
+
+        .sudoku-cell.highlight {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .sudoku-cell.error {
+            background: var(--error-color);
+            color: white;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .sudoku-cell.given {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: 900;
+        }
+
+        .sudoku-cell.user-input {
+            color: var(--info-color);
+            font-weight: bold;
+        }
+
+        .sudoku-cell.correct {
+            background: var(--success-color);
+            color: white;
+            animation: bounce 0.5s ease;
+        }
+
+        .sudoku-cell:nth-child(3n):not(:nth-child(9n)) {
+            border-right: 2px solid var(--text-primary);
+        }
+
+        .sudoku-cell:nth-child(n+19):nth-child(-n+27) {
+            border-bottom: 2px solid var(--text-primary);
+        }
+
+        .sudoku-cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--text-primary);
+        }
+
+        /* Number Pad */
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 2rem 0;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .number-btn {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 15px;
+            background: var(--bg-primary);
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 15px var(--shadow-light);
+            color: var(--text-primary);
+        }
+
+        .number-btn:hover {
+            background: var(--secondary-gradient);
+            color: white;
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-medium);
+        }
+
+        .number-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--secondary-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 81, 191, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 81, 191, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--error-color);
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            color: var(--text-secondary);
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .switch.active {
+            background: var(--success-color);
+        }
+
+        .switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .switch.active::before {
+            transform: translateX(26px);
+        }
+
+        .volume-slider {
+            width: 100px;
+            margin: 0 1rem;
+        }
+
+        /* Completion Message */
+        .completion-message {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: var(--success-color);
+            color: white;
+            border-radius: 20px;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            animation: celebrateAnimation 1s ease-in-out;
+            box-shadow: 0 10px 30px rgba(72, 187, 120, 0.3);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @keyframes celebrateAnimation {
+            0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
+            50% { transform: scale(1.1) rotate(2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 250px;
+            }
+            
+            .main-content.with-sidebar {
+                margin-left: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+
+            .sidebar {
+                width: 280px;
+                transform: translateX(-100%);
+            }
+
+            .main-content.with-sidebar {
+                margin-left: 0;
+            }
+
+            .game-container {
+                padding: 1rem;
+            }
+
+            .game-title {
+                font-size: 2rem;
+            }
+
+            .game-stats {
+                padding: 1rem;
+            }
+
+            .sudoku-container {
+                padding: 1rem;
+            }
+
+            .number-pad {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 300px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-title {
+                font-size: 2.5rem;
+            }
+
+            .welcome-features {
+                grid-template-columns: 1fr;
+            }
+
+            .game-stats {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .stat-item {
+                margin-bottom: 1rem;
+            }
+
+            .sudoku-cell {
+                font-size: 1rem;
+            }
+
+            .number-btn {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Dark mode sidebar */
+        [data-theme="dark"] .sidebar,
+        [data-theme="dark"] .top-header,
+        [data-theme="dark"] .modal {
+            background: rgba(26, 32, 44, 0.95);
+        }
+
+        /* Overlay for mobile menu */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">🧩</div>
+        <div class="loading-text">Sudoku Master Pro Yükleniyor...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+    </div>
+
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <div class="welcome-title">🧩 Sudoku Master Pro</div>
+            <div class="welcome-subtitle">En gelişmiş Sudoku deneyimi</div>
+            
+            <div class="welcome-features">
+                <div class="feature-item">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎯</div>
+                    <div>3 Zorluk Seviyesi</div>
+                </div>
+                <div class="feature-item">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌙</div>
+                    <div>Karanlık Tema</div>
+                </div>
+                <div class="feature-item">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔊</div>
+                    <div>Ses Efektleri</div>
+                </div>
+                <div class="feature-item">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
+                    <div>Responsive Tasarım</div>
+                </div>
+            </div>
+            
+            <button class="start-game-btn" onclick="startGame()">🎮 Oyuna Başla</button>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">🧩</div>
+            <div class="sidebar-title">Sudoku Master Pro</div>
+            <div class="sidebar-subtitle">Created by Mert Demir</div>
+        </div>
+        
+        <div class="sidebar-menu">
+            <button class="menu-item active" onclick="showGame()">
+                <span class="menu-icon">🎮</span>
+                <span>Oyun</span>
+            </button>
+            <button class="menu-item" onclick="showStatistics()">
+                <span class="menu-icon">📊</span>
+                <span>İstatistikler</span>
+            </button>
+            <button class="menu-item" onclick="showLeaderboard()">
+                <span class="menu-icon">🏆</span>
+                <span>Liderlik Tablosu</span>
+            </button>
+            <button class="menu-item" onclick="showAchievements()">
+                <span class="menu-icon">🎖️</span>
+                <span>Başarımlar</span>
+            </button>
+            <button class="menu-item" onclick="showTutorial()">
+                <span class="menu-icon">📚</span>
+                <span>Nasıl Oynanır</span>
+            </button>
+            <button class="menu-item" onclick="showAbout()">
+                <span class="menu-icon">ℹ️</span>
+                <span>Hakkında</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container" id="mainContainer">
+        <!-- Main Content -->
+        <main class="main-content with-sidebar" id="mainContent">
+            <!-- Top Header -->
+            <header class="top-header">
+                <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+                
+                <div class="header-actions">
+                    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">
+                        <span id="soundIcon">🔊</span>
+                        <span>Ses: Açık</span>
+                    </button>
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <span id="themeIcon">🌙</span>
+                        <span id="themeText">Karanlık</span>
+                    </button>
+                    <button class="settings-btn" onclick="openSettings()">
+                        <span>⚙️</span>
+                        <span>Ayarlar</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Game Container -->
+            <div class="game-container" id="gameView">
+                <div class="game-header">
+                    <h1 class="game-title">🧩 Sudoku Master</h1>
+                </div>
+
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="timer">00:00</div>
+                        <div class="stat-label">Süre</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="difficulty">Kolay</div>
+                        <div class="stat-label">Zorluk</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hintsUsed">0</div>
+                        <div class="stat-label">İpucu</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="mistakes">0</div>
+                        <div class="stat-label">Hata</div>
+                    </div>
+                </div>
+
+                <div class="sudoku-container">
+                    <div class="sudoku-grid" id="sudokuGrid"></div>
+                </div>
+
+                <div class="number-pad">
+                    <button class="number-btn" onclick="inputNumber(1)">1</button>
+                    <button class="number-btn" onclick="inputNumber(2)">2</button>
+                    <button class="number-btn" onclick="inputNumber(3)">3</button>
+                    <button class="number-btn" onclick="inputNumber(4)">4</button>
+                    <button class="number-btn" onclick="inputNumber(5)">5</button>
+                    <button class="number-btn" onclick="inputNumber(6)">6</button>
+                    <button class="number-btn" onclick="inputNumber(7)">7</button>
+                    <button class="number-btn" onclick="inputNumber(8)">8</button>
+                    <button class="number-btn" onclick="inputNumber(9)">9</button>
+                    <button class="number-btn" onclick="inputNumber(0)" style="grid-column: span 2;">🗑️ Sil</button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="newGame()">
+                        <span>🎮</span> Yeni Oyun
+                    </button>
+                    <button class="btn btn-warning" onclick="getHint()">
+                        <span>💡</span> İpucu
+                    </button>
+                    <button class="btn btn-success" onclick="checkSolution()">
+                        <span>✅</span> Kontrol Et
+                    </button>
+                    <button class="btn btn-secondary" onclick="pauseGame()">
+                        <span id="pauseIcon">⏸️</span> <span id="pauseText">Duraklat</span>
+                    </button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="setDifficulty('easy')">🟢 Kolay</button>
+                    <button class="btn btn-secondary" onclick="setDifficulty('medium')">🟡 Orta</button>
+                    <button class="btn btn-secondary" onclick="setDifficulty('hard')">🔴 Zor</button>
+                </div>
+
+                <div class="completion-message" id="completionMessage">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🎉</div>
+                    <div>Tebrikler! Sudoku'yu başarıyla tamamladınız!</div>
+                    <div style="margin-top: 1rem; font-size: 1rem; opacity: 0.9;" id="completionStats"></div>
+                </div>
+            </div>
+
+            <!-- Other Views -->
+            <div class="game-container" id="statisticsView" style="display: none;">
+                <h2>📊 İstatistikler</h2>
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalGamesPlayed">0</div>
+                        <div class="stat-label">Toplam Oyun</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="gamesWon">0</div>
+                        <div class="stat-label">Kazanılan</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="bestTime">--:--</div>
+                        <div class="stat-label">En İyi Süre</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="averageTime">--:--</div>
+                        <div class="stat-label">Ortalama Süre</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-container" id="leaderboardView" style="display: none;">
+                <h2>🏆 Liderlik Tablosu</h2>
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚧</div>
+                    <div>Liderlik tablosu yakında eklenecek!</div>
+                </div>
+            </div>
+
+            <div class="game-container" id="achievementsView" style="display: none;">
+                <h2>🎖️ Başarımlar</h2>
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏅</div>
+                    <div>Başarım sistemi yakında eklenecek!</div>
+                </div>
+            </div>
+
+            <div class="game-container" id="tutorialView" style="display: none;">
+                <h2>📚 Sudoku Nasıl Oynanır?</h2>
+                <div style="background: var(--bg-primary); padding: 2rem; border-radius: 15px; line-height: 1.6;">
+                    <h3>🎯 Amaç</h3>
+                    <p>9x9'luk bir kareyi 1'den 9'a kadar olan sayılarla doldurun. Her satır, her sütun ve her 3x3'lük kutuda 1'den 9'a kadar her sayı sadece bir kez bulunmalıdır.</p>
+                    
+                    <h3 style="margin-top: 2rem;">🎮 Nasıl Oynanır?</h3>
+                    <ul style="margin-left: 2rem;">
+                        <li>Boş bir hücreye tıklayın</li>
+                        <li>Sayı tuşlarını kullanarak veya ekrandaki tuşlara basarak sayı girin</li>
+                        <li>Hatalı girişler kırmızı ile gösterilir</li>
+                        <li>İpucu almak için 💡 butonunu kullanın</li>
+                        <li>Çözümünüzü kontrol etmek için ✅ butonunu kullanın</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">💡 İpuçları</h3>
+                    <ul style="margin-left: 2rem;">
+                        <li>Kolay sayılardan başlayın</li>
+                        <li>Her satır, sütun ve kutuyu kontrol edin</li>
+                        <li>Elimination tekniğini kullanın</li>
+                        <li>Sabırlı olun ve mantıklı düşünün</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="game-container" id="aboutView" style="display: none;">
+                <h2>ℹ️ Hakkında</h2>
+                <div style="background: var(--bg-primary); padding: 2rem; border-radius: 15px; text-align: center;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🧩</div>
+                    <h3>Sudoku Master Pro</h3>
+                    <p style="margin: 1rem 0; color: var(--text-secondary);">Gelişmiş özelliklerle donatılmış premium Sudoku deneyimi</p>
+                    
+                    <div style="margin: 2rem 0;">
+                        <h4>✨ Özellikler</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                                <div style="font-size: 2rem;">🎯</div>
+                                <div>3 Zorluk Seviyesi</div>
+                            </div>
+                            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                                <div style="font-size: 2rem;">🌙</div>
+                                <div>Karanlık/Aydınlık Tema</div>
+                            </div>
+                            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                                <div style="font-size: 2rem;">🔊</div>
+                                <div>Ses Efektleri</div>
+                            </div>
+                            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                                <div style="font-size: 2rem;">📱</div>
+                                <div>Responsive Tasarım</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color); color: var(--text-secondary);">
+                        <p>© Mert Demir - Tüm hakları saklıdır</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙️ Ayarlar</h2>
+                <button class="close-modal" onclick="closeSettings()">✕</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>🎨 Görünüm</h3>
+                <div class="setting-item">
+                    <div class="setting-label">Karanlık Tema</div>
+                    <div class="switch" id="themeSwitch" onclick="toggleTheme()">
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Animasyonlar</div>
+                    <div class="switch active" id="animationSwitch" onclick="toggleAnimations()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>🔊 Ses</h3>
+                <div class="setting-item">
+                    <div class="setting-label">Ses Efektleri</div>
+                    <div class="switch active" id="soundEffectsSwitch" onclick="toggleSound()">
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Ses Seviyesi</div>
+                    <div>
+                        <input type="range" min="0" max="100" value="50" class="volume-slider" id="volumeSlider" oninput="changeVolume(this.value)">
+                        <span id="volumeValue">50</span>%
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>🎮 Oyun</h3>
+                <div class="setting-item">
+                    <div class="setting-label">Otomatik Hata Kontrolü</div>
+                    <div class="switch active" id="errorCheckSwitch" onclick="toggleErrorCheck()">
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">İpucu Sınırı</div>
+                    <div class="switch" id="hintLimitSwitch" onclick="toggleHintLimit()">
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Zamanlayıcı</div>
+                    <div class="switch active" id="timerSwitch" onclick="toggleTimer()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-danger" onclick="resetSettings()">
+                    🔄 Ayarları Sıfırla
+                </button>
+                <button class="btn btn-primary" onclick="closeSettings()">
+                    ✅ Tamam
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let currentGrid = [];
+        let solutionGrid = [];
+        let selectedCell = null;
+        let gameStartTime = Date.now();
+        let timerInterval;
+        let currentDifficulty = 'easy';
+        let givenCells = new Set();
+        let hintsUsed = 0;
+        let mistakes = 0;
+        let isPaused = false;
+        let gameStats = {
+            totalGamesPlayed: 0,
+            gamesWon: 0,
+            bestTime: null,
+            totalTime: 0
+        };
+
+        // Settings
+        let settings = {
+            theme: 'light',
+            soundEnabled: true,
+            animationsEnabled: true,
+            errorCheckEnabled: true,
+            hintLimitEnabled: false,
+            timerEnabled: true,
+            volume: 50
+        };
+
+        // Sound Effects (using Web Audio API for better performance)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(frequency, duration = 200, type = 'sine') {
+            if (!settings.soundEnabled) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(settings.volume / 100 * 0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration / 1000);
+        }
+
+        // Sound effects
+        const sounds = {
+            click: () => playSound(800, 100),
+            success: () => {
+                playSound(523, 200);
+                setTimeout(() => playSound(659, 200), 100);
+                setTimeout(() => playSound(784, 300), 200);
+            },
+            error: () => playSound(200, 300, 'sawtooth'),
+            hint: () => playSound(440, 150),
+            complete: () => {
+                [523, 659, 784, 1047].forEach((freq, i) => {
+                    setTimeout(() => playSound(freq, 400), i * 150);
+                });
+            }
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            simulateLoading();
+        });
+
+        function simulateLoading() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const progressBar = document.getElementById('loadingProgress');
+            
+            let progress = 0;
+            const loadingInterval = setInterval(() => {
+                progress += Math.random() * 30;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(loadingInterval);
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                    }, 500);
+                }
+            }, 200);
+        }
+
+        function startGame() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('mainContainer').classList.add('visible');
+            
+            // Initialize sidebar for desktop
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.add('active');
+            }
+            
+            initializeGrid();
+            newGame();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('active');
+            
+            if (window.innerWidth <= 768) {
+                overlay.classList.toggle('active');
+            } else {
+                mainContent.classList.toggle('with-sidebar');
+            }
+            
+            sounds.click();
+        }
+
+        function showView(viewId) {
+            // Hide all views
+            const views = ['gameView', 'statisticsView', 'leaderboardView', 'achievementsView', 'tutorialView', 'aboutView'];
+            views.forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            
+            // Show selected view
+            document.getElementById(viewId).style.display = 'block';
+            
+            // Update menu active state
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            sounds.click();
+            
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        function showGame() { showView('gameView'); }
+        function showStatistics() { 
+            updateStatisticsDisplay();
+            showView('statisticsView'); 
+        }
+        function showLeaderboard() { showView('leaderboardView'); }
+        function showAchievements() { showView('achievementsView'); }
+        function showTutorial() { showView('tutorialView'); }
+        function showAbout() { showView('aboutView'); }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const themeSwitch = document.getElementById('themeSwitch');
+            
+            if (settings.theme === 'light') {
+                settings.theme = 'dark';
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Aydınlık';
+                themeSwitch.classList.add('active');
+            } else {
+                settings.theme = 'light';
+                body.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Karanlık';
+                themeSwitch.classList.remove('active');
+            }
+            
+            saveSettings();
+            sounds.click();
+        }
+
+        function toggleSound() {
+            settings.soundEnabled = !settings.soundEnabled;
+            const soundToggle = document.getElementById('soundToggle');
+            const soundIcon = document.getElementById('soundIcon');
+            const soundEffectsSwitch = document.getElementById('soundEffectsSwitch');
+            
+            if (settings.soundEnabled) {
+                soundToggle.innerHTML = '<span>🔊</span><span>Ses: Açık</span>';
+                soundEffectsSwitch.classList.add('active');
+                sounds.click();
+            } else {
+                soundToggle.innerHTML = '<span>🔇</span><span>Ses: Kapalı</span>';
+                soundEffectsSwitch.classList.remove('active');
+            }
+            
+            saveSettings();
+        }
+
+        function toggleAnimations() {
+            settings.animationsEnabled = !settings.animationsEnabled;
+            const animationSwitch = document.getElementById('animationSwitch');
+            
+            if (settings.animationsEnabled) {
+                animationSwitch.classList.add('active');
+                document.body.style.setProperty('--animation-duration', '0.3s');
+            } else {
+                animationSwitch.classList.remove('active');
+                document.body.style.setProperty('--animation-duration', '0s');
+            }
+            
+            saveSettings();
+            sounds.click();
+        }
+
+        function toggleErrorCheck() {
+            settings.errorCheckEnabled = !settings.errorCheckEnabled;
+            const errorCheckSwitch = document.getElementById('errorCheckSwitch');
+            
+            if (settings.errorCheckEnabled) {
+                errorCheckSwitch.classList.add('active');
+            } else {
+                errorCheckSwitch.classList.remove('active');
+            }
+            
+            saveSettings();
+            sounds.click();
+        }
+
+        function toggleHintLimit() {
+            settings.hintLimitEnabled = !settings.hintLimitEnabled;
+            const hintLimitSwitch = document.getElementById('hintLimitSwitch');
+            
+            if (settings.hintLimitEnabled) {
+                hintLimitSwitch.classList.add('active');
+            } else {
+                hintLimitSwitch.classList.remove('active');
+            }
+            
+            saveSettings();
+            sounds.click();
+        }
+
+        function toggleTimer() {
+            settings.timerEnabled = !settings.timerEnabled;
+            const timerSwitch = document.getElementById('timerSwitch');
+            
+            if (settings.timerEnabled) {
+                timerSwitch.classList.add('active');
+                startTimer();
+            } else {
+                timerSwitch.classList.remove('active');
+                clearInterval(timerInterval);
+                document.getElementById('timer').textContent = '--:--';
+            }
+            
+            saveSettings();
+            sounds.click();
+        }
+
+        function changeVolume(value) {
+            settings.volume = value;
+            document.getElementById('volumeValue').textContent = value;
+            saveSettings();
+            
+            // Test sound
+            playSound(440, 100);
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+            sounds.click();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+            sounds.click();
+        }
+
+        function resetSettings() {
+            if (confirm('Tüm ayarları sıfırlamak istediğinizden emin misiniz?')) {
+                settings = {
+                    theme: 'light',
+                    soundEnabled: true,
+                    animationsEnabled: true,
+                    errorCheckEnabled: true,
+                    hintLimitEnabled: false,
+                    timerEnabled: true,
+                    volume: 50
+                };
+                
+                applySettings();
+                saveSettings();
+                sounds.success();
+            }
+        }
+
+        function applySettings() {
+            // Apply theme
+            document.body.setAttribute('data-theme', settings.theme);
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const themeSwitch = document.getElementById('themeSwitch');
+            
+            if (settings.theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Aydınlık';
+                themeSwitch.classList.add('active');
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Karanlık';
+                themeSwitch.classList.remove('active');
+            }
+            
+            // Apply sound
+            const soundToggle = document.getElementById('soundToggle');
+            const soundEffectsSwitch = document.getElementById('soundEffectsSwitch');
+            
+            if (settings.soundEnabled) {
+                soundToggle.innerHTML = '<span>🔊</span><span>Ses: Açık</span>';
+                soundEffectsSwitch.classList.add('active');
+            } else {
+                soundToggle.innerHTML = '<span>🔇</span><span>Ses: Kapalı</span>';
+                soundEffectsSwitch.classList.remove('active');
+            }
+            
+            // Apply other settings
+            document.getElementById('animationSwitch').classList.toggle('active', settings.animationsEnabled);
+            document.getElementById('errorCheckSwitch').classList.toggle('active', settings.errorCheckEnabled);
+            document.getElementById('hintLimitSwitch').classList.toggle('active', settings.hintLimitEnabled);
+            document.getElementById('timerSwitch').classList.toggle('active', settings.timerEnabled);
+            
+            document.getElementById('volumeSlider').value = settings.volume;
+            document.getElementById('volumeValue').textContent = settings.volume;
+        }
+
+        function saveSettings() {
+            localStorage.setItem('sudokuSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('sudokuSettings');
+            if (savedSettings) {
+                settings = { ...settings, ...JSON.parse(savedSettings) };
+            }
+            applySettings();
+        }
+
+        // Initialize grid
+        function initializeGrid() {
+            const grid = document.getElementById('sudokuGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'sudoku-cell';
+                cell.addEventListener('click', () => selectCell(i));
+                grid.appendChild(cell);
+            }
+        }
+
+        // Generate complete Sudoku
+        function generateCompleteSudoku() {
+            const grid = Array(9).fill().map(() => Array(9).fill(0));
+            
+            function isValid(grid, row, col, num) {
+                for (let x = 0; x < 9; x++) {
+                    if (grid[row][x] === num) return false;
+                }
+                
+                for (let x = 0; x < 9; x++) {
+                    if (grid[x][col] === num) return false;
+                }
+                
+                const startRow = row - row % 3;
+                const startCol = col - col % 3;
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        if (grid[i + startRow][j + startCol] === num) return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            function solveSudoku(grid) {
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        if (grid[row][col] === 0) {
+                            const numbers = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+                            for (let num of numbers) {
+                                if (isValid(grid, row, col, num)) {
+                                    grid[row][col] = num;
+                                    if (solveSudoku(grid)) return true;
+                                    grid[row][col] = 0;
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            solveSudoku(grid);
+            return grid;
+        }
+
+        function createPuzzle(completeGrid, difficulty) {
+            const puzzle = completeGrid.map(row => [...row]);
+            const difficultySettings = {
+                easy: 40,
+                medium: 50,
+                hard: 60
+            };
+            
+            const cellsToRemove = difficultySettings[difficulty];
+            let removed = 0;
+            
+            while (removed < cellsToRemove) {
+                const row = Math.floor(Math.random() * 9);
+                const col = Math.floor(Math.random() * 9);
+                
+                if (puzzle[row][col] !== 0) {
+                    puzzle[row][col] = 0;
+                    removed++;
+                }
+            }
+            
+            return puzzle;
+        }
+
+        function newGame() {
+            document.getElementById('completionMessage').style.display = 'none';
+            givenCells.clear();
+            hintsUsed = 0;
+            mistakes = 0;
+            isPaused = false;
+            
+            // Update pause button
+            document.getElementById('pauseIcon').textContent = '⏸️';
+            document.getElementById('pauseText').textContent = 'Duraklat';
+            
+            // Generate new sudoku
+            solutionGrid = generateCompleteSudoku();
+            currentGrid = createPuzzle(solutionGrid, currentDifficulty);
+            
+            // Mark given cells
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (currentGrid[i][j] !== 0) {
+                        givenCells.add(i * 9 + j);
+                    }
+                }
+            }
+            
+            updateDisplay();
+            updateStats();
+            
+            if (settings.timerEnabled) {
+                startTimer();
+            }
+            
+            sounds.click();
+            gameStats.totalGamesPlayed++;
+            saveGameStats();
+        }
+
+        function updateDisplay() {
+            const cells = document.querySelectorAll('.sudoku-cell');
+            cells.forEach((cell, index) => {
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                const value = currentGrid[row][col];
+                
+                cell.textContent = value === 0 ? '' : value;
+                cell.className = 'sudoku-cell';
+                
+                if (givenCells.has(index)) {
+                    cell.classList.add('given');
+                } else if (value !== 0) {
+                    cell.classList.add('user-input');
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('hintsUsed').textContent = hintsUsed;
+            document.getElementById('mistakes').textContent = mistakes;
+            document.getElementById('difficulty').textContent = 
+                currentDifficulty === 'easy' ? 'Kolay' : 
+                currentDifficulty === 'medium' ? 'Orta' : 'Zor';
+        }
+
+        function updateStatisticsDisplay() {
+            document.getElementById('totalGamesPlayed').textContent = gameStats.totalGamesPlayed;
+            document.getElementById('gamesWon').textContent = gameStats.gamesWon;
+            document.getElementById('bestTime').textContent = gameStats.bestTime ? formatTime(gameStats.bestTime) : '--:--';
+            
+            const avgTime = gameStats.gamesWon > 0 ? Math.floor(gameStats.totalTime / gameStats.gamesWon) : 0;
+            document.getElementById('averageTime').textContent = avgTime > 0 ? formatTime(avgTime) : '--:--';
+        }
+
+        function selectCell(index) {
+            if (givenCells.has(index) || isPaused) return;
+            
+            document.querySelectorAll('.sudoku-cell').forEach(cell => {
+                cell.classList.remove('selected', 'highlight');
+            });
+            
+            selectedCell = index;
+            const cells = document.querySelectorAll('.sudoku-cell');
+            cells[index].classList.add('selected');
+            
+            // Highlight same row, column and box
+            const row = Math.floor(index / 9);
+            const col = index % 9;
+            
+            cells.forEach((cell, i) => {
+                const cellRow = Math.floor(i / 9);
+                const cellCol = i % 9;
+                const boxStartRow = Math.floor(row / 3) * 3;
+                const boxStartCol = Math.floor(col / 3) * 3;
+                const cellBoxStartRow = Math.floor(cellRow / 3) * 3;
+                const cellBoxStartCol = Math.floor(cellCol / 3) * 3;
+                
+                if (cellRow === row || cellCol === col || 
+                    (cellBoxStartRow === boxStartRow && cellBoxStartCol === boxStartCol)) {
+                    cell.classList.add('highlight');
+                }
+            });
+            
+            sounds.click();
+        }
+
+        function inputNumber(num) {
+            if (selectedCell === null || isPaused) return;
+            if (givenCells.has(selectedCell)) return;
+            
+            const row = Math.floor(selectedCell / 9);
+            const col = selectedCell % 9;
+            
+            if (num === 0) {
+                currentGrid[row][col] = 0;
+                sounds.click();
+            } else {
+                const isValid = isValidMove(row, col, num);
+                currentGrid[row][col] = num;
+                
+                if (settings.errorCheckEnabled && !isValid) {
+                    mistakes++;
+                    const cell = document.querySelectorAll('.sudoku-cell')[selectedCell];
+                    cell.classList.add('error');
+                    setTimeout(() => cell.classList.remove('error'), 500);
+                    sounds.error();
+                } else {
+                    sounds.click();
+                }
+            }
+            
+            updateDisplay();
+            updateStats();
+            
+            if (checkCompletion()) {
+                showCompletionMessage();
+            }
+        }
+
+        function isValidMove(row, col, num) {
+            const original = currentGrid[row][col];
+            currentGrid[row][col] = 0;
+            
+            // Check row
+            for (let x = 0; x < 9; x++) {
+                if (currentGrid[row][x] === num) {
+                    currentGrid[row][col] = original;
+                    return false;
+                }
+            }
+            
+            // Check column
+            for (let x = 0; x < 9; x++) {
+                if (currentGrid[x][col] === num) {
+                    currentGrid[row][col] = original;
+                    return false;
+                }
+            }
+            
+            // Check 3x3 box
+            const startRow = row - row % 3;
+            const startCol = col - col % 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (currentGrid[i + startRow][j + startCol] === num) {
+                        currentGrid[row][col] = original;
+                        return false;
+                    }
+                }
+            }
+            
+            currentGrid[row][col] = original;
+            return true;
+        }
+
+        function checkCompletion() {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (currentGrid[i][j] === 0) return false;
+                    if (currentGrid[i][j] !== solutionGrid[i][j]) return false;
+                }
+            }
+            return true;
+        }
+
+        function showCompletionMessage() {
+            clearInterval(timerInterval);
+            const completionTime = Math.floor((Date.now() - gameStartTime) / 1000);
+            
+            // Update statistics
+            gameStats.gamesWon++;
+            gameStats.totalTime += completionTime;
+            
+            if (!gameStats.bestTime || completionTime < gameStats.bestTime) {
+                gameStats.bestTime = completionTime;
+            }
+            
+            saveGameStats();
+            
+            // Show completion message
+            const completionStats = document.getElementById('completionStats');
+            completionStats.innerHTML = `
+                ⏱️ Süre: ${formatTime(completionTime)}<br>
+                💡 İpucu: ${hintsUsed}<br>
+                ❌ Hata: ${mistakes}<br>
+                🎯 Zorluk: ${currentDifficulty === 'easy' ? 'Kolay' : currentDifficulty === 'medium' ? 'Orta' : 'Zor'}
+            `;
+            
+            document.getElementById('completionMessage').style.display = 'block';
+            sounds.complete();
+            
+            // Add confetti effect
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.style.cssText = `
+                        position: fixed;
+                        top: -10px;
+                        left: ${Math.random() * 100}%;
+                        width: 10px;
+                        height: 10px;
+                        background: ${colors[Math.floor(Math.random() * colors.length)]};
+                        border-radius: 50%;
+                        pointer-events: none;
+                        z-index: 10000;
+                        animation: confettiFall ${Math.random() * 3 + 2}s linear forwards;
+                    `;
+                    
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 5000);
+                }, i * 50);
+            }
+        }
+
+        function getHint() {
+            if (checkCompletion() || isPaused) return;
+            if (settings.hintLimitEnabled && hintsUsed >= 3) {
+                alert('İpucu limitine ulaştınız! (3 ipucu)');
+                return;
+            }
+            
+            // Find empty cells
+            const emptyCells = [];
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (currentGrid[i][j] === 0) {
+                        emptyCells.push({row: i, col: j});
+                    }
+                }
+            }
+            
+            if (emptyCells.length === 0) return;
+            
+            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            currentGrid[randomCell.row][randomCell.col] = solutionGrid[randomCell.row][randomCell.col];
+            
+            // Highlight the hint cell
+            const cellIndex = randomCell.row * 9 + randomCell.col;
+            const cell = document.querySelectorAll('.sudoku-cell')[cellIndex];
+            cell.classList.add('correct');
+            setTimeout(() => cell.classList.remove('correct'), 1000);
+            
+            hintsUsed++;
+            updateDisplay();
+            updateStats();
+            sounds.hint();
+            
+            if (checkCompletion()) {
+                showCompletionMessage();
+            }
+        }
+
+        function checkSolution() {
+            if (isPaused) return;
+            
+            let hasErrors = false;
+            const cells = document.querySelectorAll('.sudoku-cell');
+            
+            cells.forEach((cell, index) => {
+                cell.classList.remove('error', 'correct');
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                
+                if (currentGrid[row][col] !== 0) {
+                    if (currentGrid[row][col] === solutionGrid[row][col]) {
+                        cell.classList.add('correct');
+                    } else {
+                        cell.classList.add('error');
+                        hasErrors = true;
+                    }
+                }
+            });
+            
+            setTimeout(() => {
+                cells.forEach(cell => {
+                    cell.classList.remove('error', 'correct');
+                });
+            }, 1500);
+            
+            if (!hasErrors && checkCompletion()) {
+                showCompletionMessage();
+                sounds.success();
+            } else if (!hasErrors) {
+                alert('Şu ana kadar doğru gidiyorsunuz! Devam edin! 👍');
+                sounds.success();
+            } else {
+                sounds.error();
+            }
+        }
+
+        function pauseGame() {
+            isPaused = !isPaused;
+            const pauseIcon = document.getElementById('pauseIcon');
+            const pauseText = document.getElementById('pauseText');
+            const sudokuContainer = document.querySelector('.sudoku-container');
+            
+            if (isPaused) {
+                pauseIcon.textContent = '▶️';
+                pauseText.textContent = 'Devam Et';
+                clearInterval(timerInterval);
+                
+                // Hide game content
+                sudokuContainer.style.filter = 'blur(10px)';
+                sudokuContainer.style.pointerEvents = 'none';
+                
+                // Show pause overlay
+                const pauseOverlay = document.createElement('div');
+                pauseOverlay.id = 'pauseOverlay';
+                pauseOverlay.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: var(--bg-primary);
+                    padding: 2rem;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px var(--shadow-medium);
+                    text-align: center;
+                    z-index: 1000;
+                `;
+                pauseOverlay.innerHTML = `
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">⏸️</div>
+                    <div style="font-size: 1.2rem; color: var(--text-primary);">Oyun Duraklatıldı</div>
+                    <div style="margin-top: 1rem; color: var(--text-secondary);">Devam etmek için "Devam Et" butonuna basın</div>
+                `;
+                document.querySelector('.game-container').appendChild(pauseOverlay);
+                
+            } else {
+                pauseIcon.textContent = '⏸️';
+                pauseText.textContent = 'Duraklat';
+                
+                if (settings.timerEnabled) {
+                    gameStartTime = Date.now() - (gameStartTime ? Date.now() - gameStartTime : 0);
+                    startTimer();
+                }
+                
+                // Show game content
+                sudokuContainer.style.filter = 'none';
+                sudokuContainer.style.pointerEvents = 'auto';
+                
+                // Remove pause overlay
+                const pauseOverlay = document.getElementById('pauseOverlay');
+                if (pauseOverlay) pauseOverlay.remove();
+            }
+            
+            sounds.click();
+        }
+
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            document.getElementById('difficulty').textContent = 
+                difficulty === 'easy' ? 'Kolay' : 
+                difficulty === 'medium' ? 'Orta' : 'Zor';
+            
+            newGame();
+            sounds.click();
+        }
+
+        function startTimer() {
+            if (!settings.timerEnabled) return;
+            
+            gameStartTime = Date.now();
+            clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                if (isPaused) return;
+                
+                const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                document.getElementById('timer').textContent = formatTime(elapsed);
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function saveGameStats() {
+            localStorage.setItem('sudokuGameStats', JSON.stringify(gameStats));
+        }
+
+        function loadGameStats() {
+            const savedStats = localStorage.getItem('sudokuGameStats');
+            if (savedStats) {
+                gameStats = { ...gameStats, ...JSON.parse(savedStats) };
+            }
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (isPaused) return;
+            
+            if (e.key >= '1' && e.key <= '9') {
+                inputNumber(parseInt(e.key));
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                inputNumber(0);
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                pauseGame();
+            } else if (e.key === 'h' || e.key === 'H') {
+                getHint();
+            } else if (e.key === 'n' || e.key === 'N') {
+                if (confirm('Yeni oyun başlatmak istediğinizden emin misiniz?')) {
+                    newGame();
+                }
+            }
+        });
+
+        // Responsive handling
+        window.addEventListener('resize', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (window.innerWidth > 768) {
+                overlay.classList.remove('active');
+                if (sidebar.classList.contains('active')) {
+                    mainContent.classList.add('with-sidebar');
+                }
+            } else {
+                mainContent.classList.remove('with-sidebar');
+            }
+        });
+
+        // Add confetti animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes confettiFall {
+                to {
+                    transform: translateY(100vh) rotate(720deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            loadGameStats();
+        });
+
+        // Prevent context menu on game area
+        document.getElementById('sudokuGrid').addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Touch support for mobile
+        let touchStartTime = 0;
+        document.addEventListener('touchstart', () => {
+            touchStartTime = Date.now();
+        });
+
+        document.addEventListener('touchend', (e) => {
+            // Prevent zoom on double tap
+            if (Date.now() - touchStartTime < 500) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
